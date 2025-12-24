@@ -45,6 +45,9 @@
         .task-status { text-align: center; font-size: 11px; color: #888; margin-top: 10px; }
         .menu-btn { display: block; width: 100%; padding: 20px; background: white; border: none; border-radius: 15px; margin-bottom: 10px; font-size: 16px; text-align: left; }
         .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 20px; border-radius: 20px; margin-bottom: 20px; }
+        .top-buttons { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .refresh-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 20px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+        .refresh-btn.loading { opacity: 0.6; }
         .sub-header { background: white; padding: 15px 20px; padding-top: 50px; display: flex; align-items: center; gap: 15px; }
         .back-btn { background: none; border: none; font-size: 24px; }
         .sub-title { font-size: 18px; font-weight: bold; }
@@ -117,7 +120,10 @@
     </div>
     <div class="screen" id="mainScreen">
         <div class="main-wrapper">
-            <button class="logout-btn" id="logoutBtn">로그아웃</button>
+            <div class="top-buttons">
+                <button class="logout-btn" id="logoutBtn">로그아웃</button>
+                <button class="refresh-btn" id="refreshBtn">🔄 새로고침</button>
+            </div>
             <div class="player-card">
                 <div class="player-name" id="pName"></div>
                 <div class="player-info" id="pInfo"></div>
@@ -481,6 +487,36 @@ document.getElementById("loginBtn").onclick = function() {
 document.getElementById("logoutBtn").onclick = function() {
     document.getElementById("mainScreen").classList.remove("active");
     document.getElementById("loginScreen").classList.add("active");
+};
+
+document.getElementById("refreshBtn").onclick = function() {
+    var btn = this;
+    btn.classList.add("loading");
+    btn.textContent = "로딩...";
+    
+    // 선수 목록과 오늘 과제 다시 불러오기
+    fetch(API_URL)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            players = data.map(function(p) {
+                return {
+                    name: p.name,
+                    birth: normalizeBirth(p.birthdate),
+                    team: p.team,
+                    pos: p.position,
+                    sport: p.sport
+                };
+            });
+            // 오늘 과제도 새로고침
+            loadTodayTasks();
+            
+            btn.classList.remove("loading");
+            btn.textContent = "🔄 새로고침";
+        })
+        .catch(function() {
+            btn.classList.remove("loading");
+            btn.textContent = "🔄 새로고침";
+        });
 };
 
 document.getElementById("btnCondition").onclick = function() {
