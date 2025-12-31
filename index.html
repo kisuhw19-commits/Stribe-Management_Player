@@ -98,6 +98,28 @@
         .no-workout { text-align: center; padding: 40px 20px; }
         .no-workout-icon { font-size: 48px; margin-bottom: 15px; }
         .no-workout-text { font-size: 16px; color: #888; }
+        
+        /* 피지컬 테스트 스타일 */
+        .tab-nav { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; }
+        .tab-btn { padding: 10px 16px; background: white; border: none; border-radius: 10px; color: #666; font-size: 14px; white-space: nowrap; }
+        .tab-btn.active { background: #667eea; color: white; }
+        .test-result-card { background: white; border-radius: 15px; padding: 18px; margin-bottom: 15px; }
+        .test-date { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .test-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .test-item { background: #f8f9fa; border-radius: 10px; padding: 12px; text-align: center; }
+        .test-item-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .test-item-value { font-size: 20px; font-weight: bold; color: #333; }
+        .test-item-unit { font-size: 12px; color: #666; }
+        .ai-analysis-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 12px; color: white; font-size: 16px; font-weight: 600; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .ai-analysis-btn:disabled { opacity: 0.6; }
+        .ai-result-card { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; padding: 20px; margin-top: 15px; color: white; }
+        .ai-result-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .ai-result-content { font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+        .ai-loading { text-align: center; padding: 20px; }
+        .ai-loading-spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .no-test { text-align: center; padding: 40px 20px; color: #888; }
+        .no-test-icon { font-size: 48px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -276,6 +298,51 @@
         </div>
     </div>
 
+    <!-- 피지컬 테스트 -->
+    <div class="screen" id="testScreen">
+        <div class="sub-header">
+            <button class="back-btn" id="testBack">←</button>
+            <div class="sub-title">피지컬 테스트</div>
+        </div>
+        <div class="sub-content">
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="inbody">📊 인바디</button>
+                <button class="tab-btn" data-tab="fms">🤸 FMS</button>
+                <button class="tab-btn" data-tab="running">🏃 런닝</button>
+            </div>
+            
+            <!-- 인바디 탭 -->
+            <div id="inbodyTab">
+                <div id="inbodyResults">
+                    <div class="no-test">
+                        <div class="no-test-icon">📊</div>
+                        <div>데이터 로딩 중...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FMS 탭 -->
+            <div id="fmsTab" style="display: none;">
+                <div id="fmsResults">
+                    <div class="no-test">
+                        <div class="no-test-icon">🤸</div>
+                        <div>데이터 로딩 중...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 런닝 탭 -->
+            <div id="runningTab" style="display: none;">
+                <div id="runningResults">
+                    <div class="no-test">
+                        <div class="no-test-icon">🏃</div>
+                        <div>데이터 로딩 중...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 등록 모달 -->
     <div class="modal-overlay" id="registerModal">
         <div class="modal-box">
@@ -394,12 +461,31 @@ function setupEventListeners() {
         showScreen('workoutScreen');
         loadWorkoutByDate(document.getElementById('workoutDatePicker').value);
     };
-    document.getElementById('btnTest').onclick = () => alert('준비중');
+    document.getElementById('btnTest').onclick = () => {
+        showScreen('testScreen');
+        loadTestResults('inbody');
+    };
 
     // 뒤로가기
     document.getElementById('conditionBack').onclick = () => showScreen('mainScreen');
     document.getElementById('workoutBack').onclick = () => showScreen('mainScreen');
+    document.getElementById('testBack').onclick = () => showScreen('mainScreen');
     document.getElementById('registerBack').onclick = () => showScreen('loginScreen');
+
+    // 피지컬 테스트 탭 전환
+    document.querySelectorAll('#testScreen .tab-btn').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('#testScreen .tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const tab = this.dataset.tab;
+            
+            document.getElementById('inbodyTab').style.display = tab === 'inbody' ? 'block' : 'none';
+            document.getElementById('fmsTab').style.display = tab === 'fms' ? 'block' : 'none';
+            document.getElementById('runningTab').style.display = tab === 'running' ? 'block' : 'none';
+            
+            loadTestResults(tab);
+        };
+    });
 
     // 날짜 변경
     document.getElementById('workoutDatePicker').onchange = function() {
@@ -696,5 +782,397 @@ async function refreshData() {
     }
     
     btn.textContent = '🔄 새로고침';
+}
+
+// =====================================================
+// 피지컬 테스트 기능
+// =====================================================
+
+async function loadTestResults(type) {
+    const containerId = type + 'Results';
+    const container = document.getElementById(containerId);
+    
+    container.innerHTML = `<div class="no-test"><div class="no-test-icon">⏳</div><div>데이터 로딩 중...</div></div>`;
+    
+    try {
+        const snapshot = await db.collection('testResults')
+            .where('player', '==', currentPlayer.name)
+            .where('type', '==', type)
+            .orderBy('date', 'desc')
+            .limit(5)
+            .get();
+        
+        const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (results.length === 0) {
+            container.innerHTML = `<div class="no-test"><div class="no-test-icon">📭</div><div>등록된 테스트 결과가 없습니다</div></div>`;
+            return;
+        }
+        
+        if (type === 'inbody') {
+            renderInbodyResults(results, container);
+        } else if (type === 'fms') {
+            renderFmsResults(results, container);
+        } else if (type === 'running') {
+            renderRunningResults(results, container);
+        }
+        
+    } catch (error) {
+        console.error('테스트 결과 로드 실패:', error);
+        container.innerHTML = `<div class="no-test"><div class="no-test-icon">⚠️</div><div>데이터를 불러올 수 없습니다</div></div>`;
+    }
+}
+
+function renderInbodyResults(results, container) {
+    const latest = results[0];
+    
+    let html = `
+        <div class="test-result-card">
+            <div class="test-date">📅 최근 측정: ${latest.date || '-'}</div>
+            <div class="test-grid">
+                <div class="test-item">
+                    <div class="test-item-label">신장</div>
+                    <div class="test-item-value">${latest.height || '-'}<span class="test-item-unit">cm</span></div>
+                </div>
+                <div class="test-item">
+                    <div class="test-item-label">체중</div>
+                    <div class="test-item-value">${latest.weight || '-'}<span class="test-item-unit">kg</span></div>
+                </div>
+                <div class="test-item">
+                    <div class="test-item-label">골격근량</div>
+                    <div class="test-item-value">${latest.muscle || '-'}<span class="test-item-unit">kg</span></div>
+                </div>
+                <div class="test-item">
+                    <div class="test-item-label">체지방률</div>
+                    <div class="test-item-value">${latest.fatPercent || '-'}<span class="test-item-unit">%</span></div>
+                </div>
+                <div class="test-item">
+                    <div class="test-item-label">체지방량</div>
+                    <div class="test-item-value">${latest.fatMass || '-'}<span class="test-item-unit">kg</span></div>
+                </div>
+            </div>
+            <button class="ai-analysis-btn" onclick="analyzeInbody()">
+                🤖 AI 분석 받기
+            </button>
+            <div id="inbodyAiResult"></div>
+        </div>
+    `;
+    
+    // 이전 기록 (있으면)
+    if (results.length > 1) {
+        html += `<div class="section-card"><div class="card-title">📈 이전 기록</div>`;
+        results.slice(1).forEach(r => {
+            html += `<div style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px;">
+                <span style="color: #888;">${r.date}</span> - 
+                체중 ${r.weight}kg, 골격근 ${r.muscle}kg, 체지방 ${r.fatPercent}%
+            </div>`;
+        });
+        html += `</div>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+function renderFmsResults(results, container) {
+    const latest = results[0];
+    const total = (parseInt(latest.deepSquat) || 0) + (parseInt(latest.hurdleStep) || 0) + 
+                  (parseInt(latest.inlineLunge) || 0) + (parseInt(latest.shoulderMob) || 0) + 
+                  (parseInt(latest.aslr) || 0) + (parseInt(latest.trunkStability) || 0) + 
+                  (parseInt(latest.rotaryStability) || 0);
+    
+    let html = `
+        <div class="test-result-card">
+            <div class="test-date">📅 최근 측정: ${latest.date || '-'}</div>
+            <div style="text-align: center; margin: 15px 0;">
+                <div style="font-size: 14px; color: #888;">총점</div>
+                <div style="font-size: 36px; font-weight: bold; color: #667eea;">${total}<span style="font-size: 18px; color: #888;">/21</span></div>
+            </div>
+            <div class="test-grid">
+                <div class="test-item"><div class="test-item-label">Deep Squat</div><div class="test-item-value">${latest.deepSquat || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">Hurdle Step</div><div class="test-item-value">${latest.hurdleStep || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">Inline Lunge</div><div class="test-item-value">${latest.inlineLunge || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">Shoulder Mob</div><div class="test-item-value">${latest.shoulderMob || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">ASLR</div><div class="test-item-value">${latest.aslr || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">Trunk Stability</div><div class="test-item-value">${latest.trunkStability || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">Rotary Stability</div><div class="test-item-value">${latest.rotaryStability || '-'}</div></div>
+            </div>
+            <button class="ai-analysis-btn" onclick="analyzeFms()">
+                🤖 AI 분석 받기
+            </button>
+            <div id="fmsAiResult"></div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function renderRunningResults(results, container) {
+    const latest = results[0];
+    
+    let html = `
+        <div class="test-result-card">
+            <div class="test-date">📅 최근 측정: ${latest.date || '-'}</div>
+            <div class="test-grid">
+                <div class="test-item"><div class="test-item-label">MAS</div><div class="test-item-value">${latest.mas || '-'}<span class="test-item-unit">km/h</span></div></div>
+                <div class="test-item"><div class="test-item-label">Max Velocity</div><div class="test-item-value">${latest.maxVel || '-'}<span class="test-item-unit">km/h</span></div></div>
+                <div class="test-item"><div class="test-item-label">VO2max</div><div class="test-item-value">${latest.vo2max || '-'}</div></div>
+                <div class="test-item"><div class="test-item-label">10m Sprint</div><div class="test-item-value">${latest.sprint10m || '-'}<span class="test-item-unit">초</span></div></div>
+                <div class="test-item"><div class="test-item-label">30m Sprint</div><div class="test-item-value">${latest.sprint30m || '-'}<span class="test-item-unit">초</span></div></div>
+            </div>
+            <button class="ai-analysis-btn" onclick="analyzeRunning()">
+                🤖 AI 분석 받기
+            </button>
+            <div id="runningAiResult"></div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// =====================================================
+// AI 분석 기능 (Claude API)
+// =====================================================
+
+// Firebase Functions URL
+const AI_FUNCTION_URL = 'https://analyzephysical-lyjp7d7fwa-du.a.run.app';
+
+async function analyzeInbody() {
+    const container = document.getElementById('inbodyAiResult');
+    const btn = document.querySelector('#inbodyTab .ai-analysis-btn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '🤖 분석 중...';
+    container.innerHTML = `<div class="ai-result-card"><div class="ai-loading"><div class="ai-loading-spinner"></div><div>AI가 분석 중입니다...</div></div></div>`;
+    
+    try {
+        // 최신 인바디 데이터 가져오기
+        const snapshot = await db.collection('testResults')
+            .where('player', '==', currentPlayer.name)
+            .where('type', '==', 'inbody')
+            .orderBy('date', 'desc')
+            .limit(1)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '';
+            btn.disabled = false;
+            btn.innerHTML = '🤖 AI 분석 받기';
+            return;
+        }
+        
+        const data = snapshot.docs[0].data();
+        
+        // 나이 계산
+        const birthYear = parseInt(currentPlayer.birth.substr(0, 2));
+        const fullYear = birthYear > 50 ? 1900 + birthYear : 2000 + birthYear;
+        const age = new Date().getFullYear() - fullYear;
+        
+        const response = await fetch(AI_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: 'inbody',
+                playerInfo: {
+                    name: currentPlayer.name,
+                    age: age,
+                    sport: currentPlayer.sport,
+                    position: currentPlayer.pos,
+                    team: currentPlayer.team
+                },
+                testData: {
+                    height: data.height,
+                    weight: data.weight,
+                    muscle: data.muscle,
+                    fatMass: data.fatMass,
+                    fatPercent: data.fatPercent
+                }
+            })
+        });
+        
+        const result = await response.json();
+        const analysisText = result.analysis;
+        
+        container.innerHTML = `
+            <div class="ai-result-card">
+                <div class="ai-result-title">🤖 AI 분석 결과</div>
+                <div class="ai-result-content">${analysisText}</div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('AI 분석 실패:', error);
+        container.innerHTML = `
+            <div class="ai-result-card" style="background: #ff6b6b;">
+                <div class="ai-result-content">분석 중 오류가 발생했습니다. 다시 시도해주세요.</div>
+            </div>
+        `;
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 분석 받기';
+}
+
+async function analyzeFms() {
+    const container = document.getElementById('fmsAiResult');
+    const btn = document.querySelector('#fmsTab .ai-analysis-btn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '🤖 분석 중...';
+    container.innerHTML = `<div class="ai-result-card"><div class="ai-loading"><div class="ai-loading-spinner"></div><div>AI가 분석 중입니다...</div></div></div>`;
+    
+    try {
+        const snapshot = await db.collection('testResults')
+            .where('player', '==', currentPlayer.name)
+            .where('type', '==', 'fms')
+            .orderBy('date', 'desc')
+            .limit(1)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '';
+            btn.disabled = false;
+            btn.innerHTML = '🤖 AI 분석 받기';
+            return;
+        }
+        
+        const data = snapshot.docs[0].data();
+        
+        const birthYear = parseInt(currentPlayer.birth.substr(0, 2));
+        const fullYear = birthYear > 50 ? 1900 + birthYear : 2000 + birthYear;
+        const age = new Date().getFullYear() - fullYear;
+        
+        const response = await fetch(AI_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: 'fms',
+                playerInfo: {
+                    name: currentPlayer.name,
+                    age: age,
+                    sport: currentPlayer.sport,
+                    position: currentPlayer.pos
+                },
+                testData: {
+                    deepSquat: data.deepSquat,
+                    hurdleStep: data.hurdleStep,
+                    inlineLunge: data.inlineLunge,
+                    shoulderMob: data.shoulderMob,
+                    aslr: data.aslr,
+                    trunkStability: data.trunkStability,
+                    rotaryStability: data.rotaryStability
+                }
+            })
+        });
+        
+        const result = await response.json();
+        const analysisText = result.analysis;
+        
+        container.innerHTML = `
+            <div class="ai-result-card">
+                <div class="ai-result-title">🤖 AI 분석 결과</div>
+                <div class="ai-result-content">${analysisText}</div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('AI 분석 실패:', error);
+        container.innerHTML = `
+            <div class="ai-result-card" style="background: #ff6b6b;">
+                <div class="ai-result-content">분석 중 오류가 발생했습니다. 다시 시도해주세요.</div>
+            </div>
+        `;
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 분석 받기';
+}
+
+async function analyzeRunning() {
+    const container = document.getElementById('runningAiResult');
+    const btn = document.querySelector('#runningTab .ai-analysis-btn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '🤖 분석 중...';
+    container.innerHTML = `<div class="ai-result-card"><div class="ai-loading"><div class="ai-loading-spinner"></div><div>AI가 분석 중입니다...</div></div></div>`;
+    
+    try {
+        const snapshot = await db.collection('testResults')
+            .where('player', '==', currentPlayer.name)
+            .where('type', '==', 'running')
+            .orderBy('date', 'desc')
+            .limit(1)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '';
+            btn.disabled = false;
+            btn.innerHTML = '🤖 AI 분석 받기';
+            return;
+        }
+        
+        const data = snapshot.docs[0].data();
+        
+        const birthYear = parseInt(currentPlayer.birth.substr(0, 2));
+        const fullYear = birthYear > 50 ? 1900 + birthYear : 2000 + birthYear;
+        const age = new Date().getFullYear() - fullYear;
+        
+        const response = await fetch(AI_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: 'running',
+                playerInfo: {
+                    name: currentPlayer.name,
+                    age: age,
+                    sport: currentPlayer.sport,
+                    position: currentPlayer.pos
+                },
+                testData: {
+                    mas: data.mas,
+                    maxVel: data.maxVel,
+                    vo2max: data.vo2max,
+                    sprint10m: data.sprint10m,
+                    sprint30m: data.sprint30m
+                }
+            })
+        });
+        
+        const result = await response.json();
+        const analysisText = result.analysis;
+        
+        container.innerHTML = `
+            <div class="ai-result-card">
+                <div class="ai-result-title">🤖 AI 분석 결과</div>
+                <div class="ai-result-content">${analysisText}</div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('AI 분석 실패:', error);
+        container.innerHTML = `
+            <div class="ai-result-card" style="background: #ff6b6b;">
+                <div class="ai-result-content">분석 중 오류가 발생했습니다. 다시 시도해주세요.</div>
+            </div>
+        `;
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 분석 받기';
+}
+        container.innerHTML = `
+            <div class="ai-result-card" style="background: #ff6b6b;">
+                <div class="ai-result-content">분석 중 오류가 발생했습니다. 다시 시도해주세요.</div>
+            </div>
+        `;
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI 분석 받기';
 }
 </script></body></html>
