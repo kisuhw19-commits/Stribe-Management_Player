@@ -276,6 +276,48 @@
         </div>
     </div>
 
+    <!-- 등록 모달 -->
+    <div class="modal-overlay" id="registerModal">
+        <div class="modal-box">
+            <div class="modal-title">등록되지 않은 선수</div>
+            <div class="modal-msg">등록되어 있지 않습니다.<br>새로 입력 하시겠습니까?</div>
+            <div class="modal-btns">
+                <button class="modal-btn cancel" id="modalCancel">취소</button>
+                <button class="modal-btn confirm" id="modalConfirm">입력</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 선수 등록 -->
+    <div class="screen" id="registerScreen">
+        <div class="sub-header">
+            <button class="back-btn" id="registerBack">←</button>
+            <div class="sub-title">신규 선수 등록</div>
+        </div>
+        <div class="sub-content">
+            <div class="section-card">
+                <div class="card-title">선수 정보</div>
+                <input type="text" class="register-input" id="regName" placeholder="이름">
+                <input type="text" class="register-input" id="regBirth" placeholder="생년월일 (예: 960920)">
+                <select class="register-input" id="regSport">
+                    <option value="">종목 선택</option>
+                    <option value="축구">축구</option>
+                    <option value="야구">야구</option>
+                    <option value="농구">농구</option>
+                </select>
+                <input type="text" class="register-input" id="regTeam" placeholder="소속팀">
+                <input type="text" class="register-input" id="regPosition" placeholder="포지션">
+            </div>
+            <button class="submit-btn" id="submitRegister">등록하기</button>
+            <div class="status-msg" id="registerStatus"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
 <script>
 // Firebase 설정
 const firebaseConfig = {
